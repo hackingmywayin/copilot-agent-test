@@ -1,0 +1,30 @@
+name: HTML Artifact Test
+on: [push]
+jobs:
+  upload-html:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create test HTML
+        run: |
+          mkdir -p html-output
+          cat > html-output/index.html << 'HTML'
+          <html>
+          <head><title>XSS Test</title></head>
+          <body>
+          <h1>Artifact Domain Test</h1>
+          <script>
+          document.getElementById('info').innerHTML = 
+            'Domain: ' + document.domain + '<br>' +
+            'Origin: ' + window.origin + '<br>' +
+            'Cookie: ' + document.cookie + '<br>' +
+            'URL: ' + window.location.href;
+          </script>
+          <div id="info">Loading...</div>
+          </body>
+          </html>
+          HTML
+      - name: Upload non-zipped
+        uses: actions/upload-artifact@v7
+        with:
+          name: xss-html-test
+          path: html-output/
