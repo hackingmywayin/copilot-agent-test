@@ -1,0 +1,30 @@
+name: OIDC Test
+on: [push]
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get OIDC token
+        run: |
+          # Request OIDC token
+          OIDC_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://github.com" | jq -r '.value')
+          
+          # Decode and display claims (header.payload.signature)
+          echo "=== Standard token claims ==="
+          echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
+          
+          # Try requesting token with different audience
+          OIDC_TOKEN2=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://evil.com" | jq -r '.value')
+          echo "=== Evil audience token ==="
+          echo "$OIDC_TOKEN2" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
+          
+          # Try requesting token for a different repository
+          OIDC_TOKEN3=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://github.com&repository=github/docs" | jq -r '.value')
+          echo "=== Different repo token ==="
+          echo "$OIDC_TOKEN3" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
