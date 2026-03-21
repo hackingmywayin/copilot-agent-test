@@ -1,0 +1,77 @@
+name: Token Scope Test
+on:
+  push:
+    paths:
+      - .github/workflows/token-scope-test.yml
+permissions:
+  contents: read
+  actions: read
+  packages: read
+jobs:
+  test-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test GITHUB_TOKEN scope
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Token permissions ==="
+          curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/hackingmywayin/copilot-agent-test | jq "{name, private, permissions}"
+
+          echo "=== Try accessing other repos ==="
+          echo "--- Private repo (helloworld-private) ---"
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/hackingmywayin/helloworld-private
+          echo ""
+
+          echo "--- Other user private repo ---"
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/tryinganotherchance/private-secret-data
+          echo ""
+
+          echo "--- Other user sensitive-data ---"
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/tryinganotherchance/sensitive-data
+          echo ""
+
+          echo "=== List all accessible repos ==="
+          curl -s -H "Authorization: token $GH_TOKEN" "https://api.github.com/installation/repositories?per_page=100" | jq ".repositories[].full_name" 2>/dev/null || echo "Not an installation token"
+
+          echo "=== Token metadata ==="
+          curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/ -D /dev/stderr 2>&1 | grep -i "x-oauth-scopes\|x-accepted-oauth-scopes"
+
+          echo "=== Rate limit ==="
+          curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/rate_limit | jq ".rate"
+
+          echo "=== Try accessing user other repos via contents API ==="
+          for repo in helloworld-private xss-test webhook-ssrf-test pages-security-test fork-source; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GH_TOKEN" "https://api.github.com/repos/hackingmywayin/$repo/contents/")
+            echo "$repo: $STATUS"
+          done
+
+          echo "=== Try accessing actions secrets ==="
+          curl -s -H "Authorization: token $GH_TOKEN" "https://api.github.com/repos/hackingmywayin/copilot-agent-test/actions/secrets" | jq ".secrets[].name" 2>/dev/null || echo "No access"
+
+          echo "=== Try listing user orgs ==="
+          curl -s -H "Authorization: token $GH_TOKEN" "https://api.github.com/user/orgs" | jq ".[].login" 2>/dev/null || echo "No access"
+
+          echo "=== Try GraphQL with GITHUB_TOKEN ==="
+          curl -s -H "Authorization: bearer $GH_TOKEN" -X POST https://api.github.com/graphql \
+            -d "{\"query\":\"{ viewer { login repositories(first:20,privacy:PRIVATE) { nodes { name } } } }\"}" | jq .
+
+          echo "=== Try listing packages ==="
+          curl -s -H "Authorization: token $GH_TOKEN" "https://api.github.com/user/packages?package_type=container" | head -20
+          curl -s -H "Authorization: token $GH_TOKEN" "https://api.github.com/users/tryinganotherchance/packages?package_type=container" | head -20
+
+          echo "=== Try accessing other repo actions runs ==="
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GH_TOKEN" "https://api.github.com/repos/hackingmywayin/helloworld-private/actions/runs"
+          echo ""
+
+          echo "=== Try accessing other repo issues ==="
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GH_TOKEN" "https://api.github.com/repos/hackingmywayin/helloworld-private/issues"
+          echo ""
+
+          echo "=== Try creating file in other repo ==="
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GH_TOKEN" -X PUT \
+            "https://api.github.com/repos/hackingmywayin/helloworld-private/contents/pwned.txt" \
+            -d "{\"message\":\"test\",\"content\":\"$(echo -n test | base64)\"}"
+          echo ""
+
+          echo "=== DONE ==="
