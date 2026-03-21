@@ -1,0 +1,13 @@
+name: Dispatchable
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to run'
+        required: true
+        type: string
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Input was: ${{ inputs.command }}"
