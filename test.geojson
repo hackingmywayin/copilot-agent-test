@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [0, 0]}, "properties": {"name": "<img src=x onerror=alert(document.domain)>", "popupContent": "<script>alert(1)</script>", "description": "test onmouseover=alert(1)", "url": "javascript:alert(1)"}}]}
