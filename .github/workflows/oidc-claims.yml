@@ -1,0 +1,33 @@
+name: OIDC Claims Test
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  dump-oidc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get OIDC Token
+        run: |
+          OIDC_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://github.com" | jq -r '.value')
+          echo "OIDC Token received (length: ${#OIDC_TOKEN})"
+          
+          # Decode JWT payload (base64 middle section)
+          PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null || echo "$OIDC_TOKEN" | cut -d. -f2 | base64 --decode 2>/dev/null)
+          echo "=== OIDC Claims ==="
+          echo "$PAYLOAD" | jq .
+          
+          # Try with different audiences
+          for aud in "api.github.com" "github.com" "sts.amazonaws.com" "https://management.azure.com" "*"; do
+            RESP=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$aud")
+            echo "=== Audience: $aud ==="
+            TOKEN=$(echo "$RESP" | jq -r '.value // empty')
+            if [ -n "$TOKEN" ]; then
+              echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq . 2>/dev/null || echo "decode failed"
+            else
+              echo "$RESP" | jq .
+            fi
+          done
