@@ -1,0 +1,3 @@
+Name,Email,Notes
+=cmd|'/C calc'!A0,test@test.com,normal
+=HYPERLINK("http://evil.com"),test2@test.com,link
