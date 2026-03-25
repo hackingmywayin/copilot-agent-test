@@ -1,0 +1,16 @@
+name: Input Test
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Name to greet'
+        required: true
+        type: string
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Hello ${{ github.event.inputs.name }}"
+          echo "TEST_VAR=${{ github.event.inputs.name }}" >> $GITHUB_ENV
+      - run: echo "Var is $TEST_VAR"
