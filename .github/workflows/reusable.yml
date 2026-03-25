@@ -1,0 +1,13 @@
+name: Reusable Workflow
+on:
+  workflow_call:
+    secrets:
+      inherited_secret:
+        required: false
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Checking for inherited secrets..."
+          env | sort | head -50
